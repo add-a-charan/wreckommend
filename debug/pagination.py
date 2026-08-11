@@ -1,5 +1,6 @@
 from wreckommend import config
 from wreckommend.navidrome.client import SubsonicClient
+import json
 
 client = SubsonicClient(
     config.URL, config.USER, config.PASSWORD, config.VERSION, config.CLIENT_NAME
@@ -15,3 +16,6 @@ while True:
     if len(batch) < size:
         break
     offset += size
+
+album = client.getAlbum(albums[0]["id"])
+print(json.dumps(album["album"]["song"][0], indent=2))

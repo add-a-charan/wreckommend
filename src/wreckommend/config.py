@@ -9,3 +9,4 @@ USER = os.getenv("SUBSONIC_USER")
 PASSWORD = os.getenv("SUBSONIC_PASSWORD")
 VERSION = "1.16.1"
 CLIENT_NAME = "wreckommend"
+DB_PATH = os.getenv("DB_PATH", "wreckommend.db")
