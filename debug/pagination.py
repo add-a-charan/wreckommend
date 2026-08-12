@@ -17,5 +17,5 @@ while True:
         break
     offset += size
 
-album = client.getAlbum(albums[0]["id"])
+album = client.getAlbum(albums[8]["id"])
 print(json.dumps(album["album"]["song"][0], indent=2))

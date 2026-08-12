@@ -34,35 +34,39 @@ def retrieve_all_tracks(client: SubsonicClient):
 
 
 def insert_track(conn, song):
+    path = song.get("path")
+    replay_gain = song.get("replayGain") or {}
     song_dict = {
         "id": song["id"],
-        "title": song["title"],
-        "album": song["album"],
-        "album_id": song["albumId"],
-        "year": song["year"],
-        "track_number": song["track"],
-        "disc_number": song["discNumber"],
-        "duration": song["duration"],
-        "bpm": song["bpm"],
-        "bit_rate": song["bitRate"],
-        "bit_depth": song["bitDepth"],
-        "sampling_rate": song["samplingRate"],
-        "channels": song["channelCount"],
-        "explicit": (1 if song["explicitStatus"] == "explicit" else 0),
-        "play_count": song["playCount"],
+        "title": song.get("title"),
+        "album": song.get("album"),
+        "album_id": song.get("albumId"),
+        "year": song.get("year"),
+        "track_number": song.get("track"),
+        "disc_number": song.get("discNumber"),
+        "duration": song.get("duration"),
+        "bpm": song.get("bpm"),
+        "bit_rate": song.get("bitRate"),
+        "bit_depth": song.get("bitDepth"),
+        "sampling_rate": song.get("samplingRate"),
+        "channels": song.get("channelCount"),
+        "explicit": (1 if song.get("explicitStatus") == "explicit" else 0),
+        "play_count": song.get("playCount", 0),
         "user_rating": song.get("userRating"),
         "average_rating": song.get("averageRating"),
-        "track_gain": song["replayGain"]["trackGain"],
-        "track_peak": song["replayGain"]["trackPeak"],
-        "path": song["path"],
+        "track_gain": replay_gain.get("trackGain"),
+        "track_peak": replay_gain.get("trackPeak"),
+        "path": path,
         "musicbrainz_track_id": song.get("musicBrainzId") or None,
         "isrc": (song.get("isrc") or [None])[0],
-        "resolved_path": str(Path(config.NAVIDROME_MUSIC_ROOT) / song["path"]),
-        "suffix": song["suffix"],
-        "content_type": song["contentType"],
+        "resolved_path": (
+            str(Path(config.NAVIDROME_MUSIC_ROOT) / path) if path else None
+        ),
+        "suffix": song.get("suffix"),
+        "content_type": song.get("contentType"),
         "starred_at": song.get("starred"),
-        "created": song["created"],
-        "last_played": song["played"],
+        "created": song.get("created"),
+        "last_played": song.get("played"),
         "raw_json": json.dumps(song),
     }
     sql = """
@@ -162,11 +166,112 @@ def insert_track(conn, song):
 
 
 def insert_track_artists(conn, song):
-    pass
+    for artist in song.get("artists", []):
+        # Register new artists in SQL table
+        artist_dict = {"id": artist["id"], "name": artist["name"]}
+        artist_sql = """
+            INSERT INTO artists (
+                id,
+                name
+            )
+            VALUES (
+                :id,
+                :name
+            )
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name
+        """
+        conn.execute(artist_sql, artist_dict)
+
+        # Match artist to the track
+        track_artist_dict = {
+            "track_id": song["id"],
+            "artist_id": artist["id"],
+            "role": "artist",
+        }
+        track_artist_sql = """
+            INSERT INTO track_artists (
+                track_id,
+                artist_id,
+                role
+            )
+            VALUES (
+                :track_id,
+                :artist_id,
+                :role
+            )
+            ON CONFLICT(track_id, artist_id, role) DO NOTHING
+        """
+        conn.execute(track_artist_sql, track_artist_dict)
+
+    for artist in song.get("albumArtists", []):
+        # Register new artists in SQL table
+        artist_dict = {"id": artist["id"], "name": artist["name"]}
+        artist_sql = """
+            INSERT INTO artists (
+                id,
+                name
+            )
+            VALUES (
+                :id,
+                :name
+            )
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name
+        """
+        conn.execute(artist_sql, artist_dict)
+
+        # Match artist to the track
+        track_artist_dict = {
+            "track_id": song["id"],
+            "artist_id": artist["id"],
+            "role": "album_artist",
+        }
+        track_artist_sql = """
+            INSERT INTO track_artists (
+                track_id,
+                artist_id,
+                role
+            )
+            VALUES (
+                :track_id,
+                :artist_id,
+                :role
+            )
+            ON CONFLICT(track_id, artist_id, role) DO NOTHING
+        """
+        conn.execute(track_artist_sql, track_artist_dict)
 
 
 def insert_track_tags(conn, song):
-    pass
+    for genre in song.get("genres", []):
+        track_tag_dict = {
+            "entity_type": "library_track",
+            "entity_id": song["id"],
+            "tag": genre["name"].strip().lower(),
+            "weight": 1.0,
+            "source": "navidrome",
+        }
+
+        track_tag_sql = """
+            INSERT INTO track_tags (
+                entity_type,
+                entity_id,
+                tag,
+                weight,
+                source
+            )
+            VALUES (
+                :entity_type,
+                :entity_id,
+                :tag,
+                :weight,
+                :source
+            )
+            ON CONFLICT(entity_type, entity_id, tag, source) DO UPDATE SET
+                weight = excluded.weight
+        """
+        conn.execute(track_tag_sql, track_tag_dict)
 
 
 def ingest(conn, tracks):
