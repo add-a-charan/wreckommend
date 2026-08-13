@@ -69,3 +69,14 @@ CREATE TABLE IF NOT EXISTS track_artists (
     FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE,
     FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS api_response_cache (
+    provider TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    params_key TEXT NOT NULL,
+    response_json TEXT NOT NULL,
+    status TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+
+    PRIMARY KEY (provider, endpoint, params_key)
+);
