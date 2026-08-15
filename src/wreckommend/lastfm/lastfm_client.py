@@ -1,12 +1,13 @@
-import requests
 import time
+
+import requests
 
 
 class LastfmClient:
-    def __init__(self, base_url: str, api_key: str, contact_email: str):
+    def __init__(self, url: str, api_key: str, contact_email: str):
+        self.url = url
         self.api_key = api_key
         self.session = requests.Session()
-        self.base_url = base_url
         self.session.headers.update(
             {"User-Agent": f"wreckommend/0.1 ({contact_email})"}
         )
@@ -18,11 +19,16 @@ class LastfmClient:
             time.sleep(0.2 - elapsed)
         self._last_request_time = time.monotonic()
 
-    # Helper Method For All API Methods
-    def _request(self, method: str, params: dict, retry: bool = True) -> dict:
+    def _request(
+        self, method: str, params: dict | None = None, retry: bool = True
+    ) -> dict:
         self._throttle()
-        merged = params | {"method": method, "api_key": self.api_key, "format": "json"}
-        response = self.session.get(self.base_url, params=merged, timeout=10)
+        request_params = (params or {}) | {
+            "method": method,
+            "api_key": self.api_key,
+            "format": "json",
+        }
+        response = self.session.get(self.url, params=request_params, timeout=10)
         response.raise_for_status()
         data = response.json()
         if "error" in data:

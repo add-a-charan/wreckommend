@@ -1,5 +1,5 @@
-from wreckommend.storage import cache
 from wreckommend.lastfm.lastfm_client import LastfmClient
+from wreckommend.storage import cache
 
 
 def _params_key(*parts: str) -> str:
@@ -13,8 +13,8 @@ def get_track_top_tags(conn, client: LastfmClient, artist: str, track: str) -> d
         return cached
 
     response = client.get_track_top_tags(artist, track)
-    cache.put(conn, "lastfm", "track.getTopTags", params_key, response)
-    conn.commit()
+    with conn:
+        cache.put(conn, "lastfm", "track.getTopTags", params_key, response)
     return response
 
 
@@ -25,12 +25,13 @@ def get_artist_top_tags(conn, client: LastfmClient, artist: str) -> dict:
         return cached
 
     response = client.get_artist_top_tags(artist)
-    cache.put(conn, "lastfm", "artist.getTopTags", params_key, response)
-    conn.commit()
+    with conn:
+        cache.put(conn, "lastfm", "artist.getTopTags", params_key, response)
     return response
 
 
 def _extract_tags(response: dict) -> list[dict]:
+    # Last.fm returns a single tag as a dict instead of a one-item list, so just normalizing for consistency
     tags = response.get("toptags", {}).get("tag", [])
     if isinstance(tags, dict):
         tags = [tags]
@@ -45,7 +46,7 @@ def insert_track_tags(
         if not name:
             continue
         try:
-            weight = float(tag.get("count", 0)) / 100.0
+            weight = min(float(tag.get("count", 0)) / 100.0, 1.0)
         except (TypeError, ValueError):
             weight = 0.0
 
@@ -102,17 +103,22 @@ def enrich_library_tracks(conn, client: LastfmClient) -> None:
         try:
             response = get_track_top_tags(conn, client, artist_name, title)
             if _extract_tags(response):
-                insert_track_tags(
-                    conn, "library_track", track_id, response, "lastfm_track"
-                )
+                with conn:
+                    insert_track_tags(
+                        conn, "library_track", track_id, response, "lastfm_track"
+                    )
                 track_tag_count += 1
             else:
                 artist_response = get_artist_top_tags(conn, client, artist_name)
-                insert_track_tags(
-                    conn, "library_track", track_id, artist_response, "lastfm_artist"
-                )
+                with conn:
+                    insert_track_tags(
+                        conn,
+                        "library_track",
+                        track_id,
+                        artist_response,
+                        "lastfm_artist",
+                    )
                 artist_tag_count += 1
-            conn.commit()
         except RuntimeError as e:
             failed_count += 1
             print(f"[{i}/{total}] FAILED '{artist_name} - {title}': {e}")

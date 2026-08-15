@@ -1,5 +1,3 @@
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS tracks (
     id TEXT PRIMARY KEY,
 
@@ -34,7 +32,6 @@ CREATE TABLE IF NOT EXISTS tracks (
 
     musicbrainz_track_id TEXT,
     isrc TEXT,
-    resolved_path TEXT,
     suffix TEXT,
     content_type TEXT,
     starred_at TEXT,
@@ -43,6 +40,15 @@ CREATE TABLE IF NOT EXISTS tracks (
     last_played TEXT,
 
     raw_json TEXT 
+);
+
+CREATE TABLE IF NOT EXISTS albums (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    artist TEXT,
+    song_count INTEGER,
+    duration INTEGER,
+    last_ingested_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS track_tags (
@@ -56,7 +62,9 @@ CREATE TABLE IF NOT EXISTS track_tags (
 
 CREATE TABLE IF NOT EXISTS artists (
     id TEXT PRIMARY KEY,
-    name TEXT NOT NULL
+    name TEXT NOT NULL,
+    musicbrainz_id TEXT,
+    latin_name TEXT
 );
 
 CREATE TABLE IF NOT EXISTS track_artists (
@@ -68,6 +76,10 @@ CREATE TABLE IF NOT EXISTS track_artists (
 
     FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE,
     FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS musicbrainz_genres (
+    name TEXT PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS api_response_cache (

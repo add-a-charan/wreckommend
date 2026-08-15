@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def get(conn, provider: str, endpoint: str, params_key: str) -> dict | None:
@@ -29,7 +29,7 @@ def put(
         "params_key": params_key,
         "response_json": json.dumps(response),
         "status": status,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "fetched_at": datetime.now(UTC).isoformat(),
     }
     sql = """
         INSERT INTO api_response_cache (

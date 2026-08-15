@@ -1,14 +1,7 @@
-from wreckommend import config
 import json
-from wreckommend.navidrome.client import SubsonicClient
-from pathlib import Path
+from datetime import datetime, timezone
 
-
-def build_client() -> SubsonicClient:
-    client = SubsonicClient(
-        config.URL, config.USER, config.PASSWORD, config.VERSION, config.CLIENT_NAME
-    )
-    return client
+from wreckommend.subsonic.subsonic_client import SubsonicClient
 
 
 def retrieve_all_albums(client: SubsonicClient):
@@ -16,7 +9,7 @@ def retrieve_all_albums(client: SubsonicClient):
     offset = 0
     size = 500
     while True:
-        page = client.getAlbumList2("alphabeticalByName", size=size, offset=offset)
+        page = client.get_album_list2("alphabeticalByName", size=size, offset=offset)
         batch = page["albumList2"].get("album", [])
         albums.extend(batch)
         if len(batch) < size:
@@ -25,12 +18,47 @@ def retrieve_all_albums(client: SubsonicClient):
     return albums
 
 
-def retrieve_all_tracks(client: SubsonicClient):
-    albums = retrieve_all_albums(client)
-    tracks = []
-    for album in albums:
-        tracks.extend(client.getAlbum(album["id"])["album"]["song"])
-    return tracks
+def retrieve_album_tracks(client: SubsonicClient, album: dict) -> list:
+    return client.get_album(album["id"])["album"].get("song", [])
+
+
+def get_stored_album_fingerprint(conn, album_id):
+    row = conn.execute(
+        "SELECT song_count, duration FROM albums WHERE id = ?", (album_id,)
+    ).fetchone()
+    return tuple(row) if row else None
+
+
+def is_album_unchanged(conn, album):
+    stored = get_stored_album_fingerprint(conn, album["id"])
+    current = (album.get("songCount"), album.get("duration"))
+    return stored == current
+
+
+def insert_album(conn, album):
+    album_dict = {
+        "id": album["id"],
+        "name": album.get("name"),
+        "artist": album.get("artist"),
+        "song_count": album.get("songCount"),
+        "duration": album.get("duration"),
+        "last_ingested_at": datetime.now(timezone.utc).isoformat(),
+    }
+    sql = """
+        INSERT INTO albums (
+            id, name, artist, song_count, duration, last_ingested_at
+        )
+        VALUES (
+            :id, :name, :artist, :song_count, :duration, :last_ingested_at
+        )
+        ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name,
+            artist = excluded.artist,
+            song_count = excluded.song_count,
+            duration = excluded.duration,
+            last_ingested_at = excluded.last_ingested_at
+    """
+    conn.execute(sql, album_dict)
 
 
 def insert_track(conn, song):
@@ -59,9 +87,6 @@ def insert_track(conn, song):
         "path": path,
         "musicbrainz_track_id": song.get("musicBrainzId") or None,
         "isrc": (song.get("isrc") or [None])[0],
-        "resolved_path": (
-            str(Path(config.NAVIDROME_MUSIC_ROOT) / path) if path else None
-        ),
         "suffix": song.get("suffix"),
         "content_type": song.get("contentType"),
         "starred_at": song.get("starred"),
@@ -93,7 +118,6 @@ def insert_track(conn, song):
             path,
             musicbrainz_track_id,
             isrc,
-            resolved_path,
             suffix,
             content_type,
             starred_at,
@@ -124,7 +148,6 @@ def insert_track(conn, song):
             :path,
             :musicbrainz_track_id,
             :isrc,
-            :resolved_path,
             :suffix,
             :content_type,
             :starred_at,
@@ -154,7 +177,6 @@ def insert_track(conn, song):
             path = excluded.path,
             musicbrainz_track_id = excluded.musicbrainz_track_id,
             isrc = excluded.isrc,
-            resolved_path = excluded.resolved_path,
             suffix = excluded.suffix,
             content_type = excluded.content_type,
             starred_at = excluded.starred_at,
@@ -165,82 +187,51 @@ def insert_track(conn, song):
     conn.execute(sql, song_dict)
 
 
-def insert_track_artists(conn, song):
-    for artist in song.get("artists", []):
-        # Register new artists in SQL table
-        artist_dict = {"id": artist["id"], "name": artist["name"]}
-        artist_sql = """
-            INSERT INTO artists (
-                id,
-                name
-            )
-            VALUES (
-                :id,
-                :name
-            )
-            ON CONFLICT(id) DO UPDATE SET
-                name = excluded.name
-        """
-        conn.execute(artist_sql, artist_dict)
+def _link_track_artist(conn, track_id, artist, role):
+    artist_dict = {"id": artist["id"], "name": artist["name"]}
+    artist_sql = """
+        INSERT INTO artists (
+            id,
+            name
+        )
+        VALUES (
+            :id,
+            :name
+        )
+        ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name
+    """
+    conn.execute(artist_sql, artist_dict)
 
-        # Match artist to the track
-        track_artist_dict = {
-            "track_id": song["id"],
-            "artist_id": artist["id"],
-            "role": "artist",
-        }
-        track_artist_sql = """
-            INSERT INTO track_artists (
-                track_id,
-                artist_id,
-                role
-            )
-            VALUES (
-                :track_id,
-                :artist_id,
-                :role
-            )
-            ON CONFLICT(track_id, artist_id, role) DO NOTHING
-        """
-        conn.execute(track_artist_sql, track_artist_dict)
+    track_artist_dict = {
+        "track_id": track_id,
+        "artist_id": artist["id"],
+        "role": role,
+    }
+    track_artist_sql = """
+        INSERT INTO track_artists (
+            track_id,
+            artist_id,
+            role
+        )
+        VALUES (
+            :track_id,
+            :artist_id,
+            :role
+        )
+        ON CONFLICT(track_id, artist_id, role) DO NOTHING
+    """
+    conn.execute(track_artist_sql, track_artist_dict)
+
+
+def insert_track_artists(conn, song):
+    # We first recognize all artists on a track as artists,
+    # then have another for-loop that specifically designates album artists for the track
+    for artist in song.get("artists", []):
+        _link_track_artist(conn, song["id"], artist, "artist")
 
     for artist in song.get("albumArtists", []):
-        # Register new artists in SQL table
-        artist_dict = {"id": artist["id"], "name": artist["name"]}
-        artist_sql = """
-            INSERT INTO artists (
-                id,
-                name
-            )
-            VALUES (
-                :id,
-                :name
-            )
-            ON CONFLICT(id) DO UPDATE SET
-                name = excluded.name
-        """
-        conn.execute(artist_sql, artist_dict)
-
-        # Match artist to the track
-        track_artist_dict = {
-            "track_id": song["id"],
-            "artist_id": artist["id"],
-            "role": "album_artist",
-        }
-        track_artist_sql = """
-            INSERT INTO track_artists (
-                track_id,
-                artist_id,
-                role
-            )
-            VALUES (
-                :track_id,
-                :artist_id,
-                :role
-            )
-            ON CONFLICT(track_id, artist_id, role) DO NOTHING
-        """
-        conn.execute(track_artist_sql, track_artist_dict)
+        _link_track_artist(conn, song["id"], artist, "album_artist")
 
 
 def insert_track_tags(conn, song):
@@ -275,8 +266,8 @@ def insert_track_tags(conn, song):
 
 
 def ingest(conn, tracks):
-    for song in tracks:
-        insert_track(conn, song)
-        insert_track_artists(conn, song)
-        insert_track_tags(conn, song)
-    conn.commit()
+    with conn:
+        for song in tracks:
+            insert_track(conn, song)
+            insert_track_artists(conn, song)
+            insert_track_tags(conn, song)
