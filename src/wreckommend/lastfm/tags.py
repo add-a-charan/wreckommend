@@ -144,12 +144,14 @@ def report_top_tags(conn, limit: int = 200) -> list[tuple[str, int]]:
     ).fetchall()
 
 
-def get_cleaned_library_tags(conn) -> dict[str, dict[str, float]]:
-    """entity_id -> {canonical_tag: summed_weight}"""
+def get_cleaned_tags(conn, entity_type: str) -> dict[str, dict[str, float]]:
+    """entity_id -> {canonical_tag: summed_weight} for the given entity_type
+    ('library_track' or 'candidate_track')."""
     artist_names = load_artist_names(conn)
     genre_whitelist = load_genre_whitelist(conn)
     rows = conn.execute(
-        "SELECT entity_id, tag, weight FROM track_tags WHERE entity_type = 'library_track'"
+        "SELECT entity_id, tag, weight FROM track_tags WHERE entity_type = ?",
+        (entity_type,),
     ).fetchall()
 
     cleaned: dict[str, dict[str, float]] = {}
@@ -160,6 +162,10 @@ def get_cleaned_library_tags(conn) -> dict[str, dict[str, float]]:
         track_tags = cleaned.setdefault(entity_id, {})
         track_tags[canonical] = track_tags.get(canonical, 0.0) + weight
     return cleaned
+
+
+def get_cleaned_library_tags(conn) -> dict[str, dict[str, float]]:
+    return get_cleaned_tags(conn, "library_track")
 
 
 def _tag_repeat_count(weight: float) -> int:
@@ -188,6 +194,20 @@ def vectorize_library(conn):
     vectorizer = TfidfVectorizer()
     matrix = vectorizer.fit_transform(documents)
     return entity_ids, vectorizer, matrix
+
+
+def vectorize_all(conn):
+    """Fit one TF-IDF space across both library and candidate tag documents, so
+    candidates can be compared against library tracks (not just each other)."""
+    library = get_cleaned_tags(conn, "library_track")
+    candidates = get_cleaned_tags(conn, "candidate_track")
+
+    combined = {**library, **candidates}
+    entity_ids, documents = build_corpus(combined)
+
+    vectorizer = TfidfVectorizer()
+    matrix = vectorizer.fit_transform(documents)
+    return entity_ids, matrix, set(library.keys()), set(candidates.keys())
 
 
 def nearest_tracks(

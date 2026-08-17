@@ -1,4 +1,5 @@
 from wreckommend import config
+from wreckommend.deezer.deezer_client import DeezerClient
 from wreckommend.lastfm.lastfm_client import LastfmClient
 from wreckommend.musicbrainz.musicbrainz_client import MusicBrainzClient
 from wreckommend.subsonic.subsonic_client import SubsonicClient
@@ -22,3 +23,7 @@ def build_lastfm_client() -> LastfmClient:
 
 def build_musicbrainz_client() -> MusicBrainzClient:
     return MusicBrainzClient(config.MUSICBRAINZ_URL, config.APP_CONTACT_EMAIL)
+
+
+def build_deezer_client() -> DeezerClient:
+    return DeezerClient(config.DEEZER_URL, config.APP_CONTACT_EMAIL)

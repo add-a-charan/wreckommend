@@ -14,9 +14,14 @@ SUBSONIC_MUSIC_ROOT = os.environ["NAVIDROME_MUSIC_ROOT"]
 
 APP_CLIENT_NAME = "wreckommend"
 APP_DB_PATH = os.getenv("DB_PATH", str(PROJECT_ROOT / "data" / "wreckommend.db"))
+APP_PREVIEW_DIR = Path(
+    os.getenv("PREVIEW_DIR", str(PROJECT_ROOT / "data" / "previews"))
+)
 APP_CONTACT_EMAIL = os.environ["CONTACT_EMAIL"]
 
 LASTFM_API_KEY = os.environ["LASTFM_API_KEY"]
 LASTFM_URL = "http://ws.audioscrobbler.com/2.0/"
 
 MUSICBRAINZ_URL = "https://musicbrainz.org/ws/2/"
+
+DEEZER_URL = "https://api.deezer.com/"

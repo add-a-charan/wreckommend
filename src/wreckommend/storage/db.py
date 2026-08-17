@@ -12,6 +12,32 @@ def _migrate(conn):
     if "latin_name" not in existing:
         conn.execute("ALTER TABLE artists ADD COLUMN latin_name TEXT")
 
+    existing_candidates = {
+        row[1] for row in conn.execute("PRAGMA table_info(candidate_tracks)")
+    }
+    if "tag_score" not in existing_candidates:
+        conn.execute("ALTER TABLE candidate_tracks ADD COLUMN tag_score REAL")
+    if "tag_score_nearest_track_id" not in existing_candidates:
+        conn.execute(
+            "ALTER TABLE candidate_tracks ADD COLUMN tag_score_nearest_track_id TEXT"
+        )
+    if "tag_score_computed_at" not in existing_candidates:
+        conn.execute(
+            "ALTER TABLE candidate_tracks ADD COLUMN tag_score_computed_at TEXT"
+        )
+    if "preview_url" not in existing_candidates:
+        conn.execute("ALTER TABLE candidate_tracks ADD COLUMN preview_url TEXT")
+    if "preview_fetched_at" not in existing_candidates:
+        conn.execute(
+            "ALTER TABLE candidate_tracks ADD COLUMN preview_fetched_at TEXT"
+        )
+    if "preview_path" not in existing_candidates:
+        conn.execute("ALTER TABLE candidate_tracks ADD COLUMN preview_path TEXT")
+    if "preview_downloaded_at" not in existing_candidates:
+        conn.execute(
+            "ALTER TABLE candidate_tracks ADD COLUMN preview_downloaded_at TEXT"
+        )
+
 
 def get_connection():
     path = Path(config.APP_DB_PATH)

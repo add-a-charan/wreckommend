@@ -1,14 +1,17 @@
 import argparse
 
 from wreckommend.clients import (
+    build_deezer_client,
     build_lastfm_client,
     build_musicbrainz_client,
     build_subsonic_client,
 )
+from wreckommend.deezer.preview import download_previews, fetch_previews
 from wreckommend.lastfm import tags
 from wreckommend.lastfm.candidates import discover_candidates
 from wreckommend.lastfm.enrich import enrich_library_tracks
 from wreckommend.musicbrainz.enrich import sync_genre_whitelist
+from wreckommend.scoring import score_candidates, top_candidates
 from wreckommend.subsonic.ingest import (
     is_album_unchanged,
     ingest,
@@ -60,6 +63,46 @@ def cmd_discover(args, client):
     conn = get_connection()
     try:
         discover_candidates(conn, client)
+    finally:
+        conn.close()
+
+
+def cmd_score(args):
+    conn = get_connection()
+    try:
+        score_candidates(conn)
+    finally:
+        conn.close()
+
+
+def cmd_top_candidates(args):
+    conn = get_connection()
+    try:
+        rows = top_candidates(conn, limit=args.limit)
+        if not rows:
+            print("No scored candidates yet. Run `score` first.")
+            return
+        for title, artist_name, tag_score, discovered_via, source, preview_url in rows:
+            line = f"{tag_score:.3f}  {artist_name} - {title}  (via {discovered_via}, {source})"
+            if preview_url:
+                line += f"\n           {preview_url}"
+            print(line)
+    finally:
+        conn.close()
+
+
+def cmd_fetch_previews(args, client):
+    conn = get_connection()
+    try:
+        fetch_previews(conn, client, limit=args.limit)
+    finally:
+        conn.close()
+
+
+def cmd_download_previews(args, client):
+    conn = get_connection()
+    try:
+        download_previews(conn, client, limit=args.limit)
     finally:
         conn.close()
 
@@ -128,6 +171,36 @@ def main():
         help="Discover candidate tracks outside the library via Last.fm similar artists",
     )
     discover_parser.set_defaults(func=cmd_discover, client_builder=build_lastfm_client)
+
+    score_parser = subparsers.add_parser(
+        "score",
+        help="Score candidate tracks against liked library tracks in shared tag space",
+    )
+    score_parser.set_defaults(func=cmd_score, client_builder=None)
+
+    top_candidates_parser = subparsers.add_parser(
+        "top-candidates", help="List highest-scored candidate tracks"
+    )
+    top_candidates_parser.add_argument("--limit", type=int, default=25)
+    top_candidates_parser.set_defaults(func=cmd_top_candidates, client_builder=None)
+
+    fetch_previews_parser = subparsers.add_parser(
+        "fetch-previews",
+        help="Fetch Deezer 30s preview URLs for the top-scored candidate tracks",
+    )
+    fetch_previews_parser.add_argument("--limit", type=int, default=25)
+    fetch_previews_parser.set_defaults(
+        func=cmd_fetch_previews, client_builder=build_deezer_client
+    )
+
+    download_previews_parser = subparsers.add_parser(
+        "download-previews",
+        help="Download preview MP3s to disk for candidates that already have a preview_url",
+    )
+    download_previews_parser.add_argument("--limit", type=int, default=25)
+    download_previews_parser.set_defaults(
+        func=cmd_download_previews, client_builder=build_deezer_client
+    )
 
     sync_genres_parser = subparsers.add_parser(
         "sync-genres",

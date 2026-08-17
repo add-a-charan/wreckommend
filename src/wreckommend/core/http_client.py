@@ -30,5 +30,11 @@ class ApiClient:
         response.raise_for_status()
         return response.json()
 
+    def _download(self, url: str) -> bytes:
+        self._throttle()
+        response = self.session.get(url, timeout=15)
+        response.raise_for_status()
+        return response.content
+
     def _raise_error(self, service: str, code, message: str) -> None:
         raise RuntimeError(f"{service} error {code}: {message}")

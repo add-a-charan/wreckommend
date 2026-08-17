@@ -86,7 +86,16 @@ CREATE TABLE IF NOT EXISTS candidate_tracks (
     track_mbid TEXT,
     discovered_via TEXT,
     source TEXT NOT NULL,
-    fetched_at TEXT NOT NULL
+    fetched_at TEXT NOT NULL,
+
+    tag_score REAL,
+    tag_score_nearest_track_id TEXT,
+    tag_score_computed_at TEXT,
+
+    preview_url TEXT,
+    preview_fetched_at TEXT,
+    preview_path TEXT,
+    preview_downloaded_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS api_response_cache (
