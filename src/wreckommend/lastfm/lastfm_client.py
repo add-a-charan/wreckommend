@@ -1,43 +1,29 @@
 import time
 
-import requests
+from wreckommend.core.http_client import ApiClient
 
 
-class LastfmClient:
+class LastfmClient(ApiClient):
     def __init__(self, url: str, api_key: str, contact_email: str):
-        self.url = url
+        super().__init__(url, contact_email, min_interval=0.2)
         self.api_key = api_key
-        self.session = requests.Session()
-        self.session.headers.update(
-            {"User-Agent": f"wreckommend/0.1 ({contact_email})"}
-        )
-        self._last_request_time = 0.0
-
-    def _throttle(self):
-        elapsed = time.monotonic() - self._last_request_time
-        if elapsed < 0.2:
-            time.sleep(0.2 - elapsed)
-        self._last_request_time = time.monotonic()
 
     def _request(
         self, method: str, params: dict | None = None, retry: bool = True
     ) -> dict:
-        self._throttle()
         request_params = (params or {}) | {
             "method": method,
             "api_key": self.api_key,
             "format": "json",
         }
-        response = self.session.get(self.url, params=request_params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+        data = self._get(self.url, request_params)
         if "error" in data:
             code = data["error"]
             message = data.get("message", "unknown error")
             if code == 29 and retry:
                 time.sleep(1.0)
                 return self._request(method, params, retry=False)
-            raise RuntimeError(f"Last.fm error {code} on {method}: {message}")
+            self._raise_error("Last.fm", code, f"{message} (method: {method})")
         return data
 
     def get_track_top_tags(self, artist: str, track: str) -> dict:
@@ -45,3 +31,14 @@ class LastfmClient:
 
     def get_artist_top_tags(self, artist: str) -> dict:
         return self._request("artist.getTopTags", {"artist": artist})
+
+    def get_similar_artists(self, artist: str, limit: int = 15) -> dict:
+        return self._request("artist.getSimilar", {"artist": artist, "limit": limit})
+
+    def get_artist_top_tracks(self, artist: str, limit: int = 10) -> dict:
+        return self._request("artist.getTopTracks", {"artist": artist, "limit": limit})
+
+    def get_similar_tracks(self, artist: str, track: str, limit: int = 15) -> dict:
+        return self._request(
+            "track.getSimilar", {"artist": artist, "track": track, "limit": limit}
+        )

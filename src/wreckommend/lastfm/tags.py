@@ -4,6 +4,8 @@ import unicodedata
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from wreckommend.storage import cache
+
 _WHITESPACE = re.compile(r"\s+")
 _JOINER = re.compile(r"[\s\-]+")
 
@@ -11,8 +13,6 @@ _JOINER = re.compile(r"[\s\-]+")
 def strip_accents(text: str) -> str:
     result = []
     for ch in text:
-        # Check that the tag is in latin script before normalizing
-        # if it isn't in latin, leave the tag alone to prevent data loss
         base = unicodedata.normalize("NFKD", ch)[0]
         result.append(base if base.isascii() else ch)
     return "".join(result)
@@ -97,8 +97,10 @@ def load_artist_names(conn) -> set[str]:
 
 
 def load_genre_whitelist(conn) -> set[str]:
-    rows = conn.execute("SELECT name FROM musicbrainz_genres").fetchall()
-    return {normalize(name) for (name,) in rows}
+    cached = cache.get(conn, "musicbrainz", "genres", "all")
+    if cached is None:
+        return set()
+    return {normalize(name) for name in cached["genres"]}
 
 
 def canonicalize(tag: str) -> str:
@@ -160,29 +162,26 @@ def get_cleaned_library_tags(conn) -> dict[str, dict[str, float]]:
     return cleaned
 
 
-# Navidrome and Lastfm weights work differently, where Navidrome is sort of just a binary thing
-# while Lastfm is an actual measure of the tag's popularity. So this value will probably need to change
-# a lot until we find an actual strategy for making the weights comparable.
-_REPEAT_SCALE = 20
+def _tag_repeat_count(weight: float) -> int:
+    # A tag confirmed by multiple sources sums to a higher weight, so it gets
+    # repeated more, giving TF-IDF's term-frequency count a bigger say for it.
+    return max(1, round(weight))
 
 
 def _document_for_track(tag_weights: dict[str, float]) -> str:
     words = []
     for tag, weight in tag_weights.items():
-        repeats = max(1, round(weight * _REPEAT_SCALE))
-        words.extend([tag] * repeats)
+        words.extend([tag] * _tag_repeat_count(weight))
     return " ".join(words)
 
 
 def build_corpus(cleaned: dict[str, dict[str, float]]) -> tuple[list[str], list[str]]:
-    """Returns (entity_ids, documents), in matching order."""
     entity_ids = list(cleaned.keys())
     documents = [_document_for_track(cleaned[entity_id]) for entity_id in entity_ids]
     return entity_ids, documents
 
 
 def vectorize_library(conn):
-    """Returns (entity_ids, vectorizer, matrix) for all library tracks."""
     cleaned = get_cleaned_library_tags(conn)
     entity_ids, documents = build_corpus(cleaned)
 

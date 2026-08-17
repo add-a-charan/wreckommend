@@ -1,8 +1,14 @@
 import argparse
 
-from wreckommend.clients import build_lastfm_client, build_subsonic_client
+from wreckommend.clients import (
+    build_lastfm_client,
+    build_musicbrainz_client,
+    build_subsonic_client,
+)
 from wreckommend.lastfm import tags
+from wreckommend.lastfm.candidates import discover_candidates
 from wreckommend.lastfm.enrich import enrich_library_tracks
+from wreckommend.musicbrainz.enrich import sync_genre_whitelist
 from wreckommend.subsonic.ingest import (
     is_album_unchanged,
     ingest,
@@ -13,15 +19,13 @@ from wreckommend.subsonic.ingest import (
 from wreckommend.storage.db import get_connection
 
 
-def cmd_ping(args):
-    client = build_subsonic_client()
+def cmd_ping(args, client):
     response = client.ping()
     print(f"Navidrome reachable (status={response['status']})")
     print(response)
 
 
-def cmd_ingest(args):
-    client = build_subsonic_client()
+def cmd_ingest(args, client):
     albums = retrieve_all_albums(client)
     print(f"Found {len(albums)} albums")
 
@@ -44,11 +48,27 @@ def cmd_ingest(args):
         conn.close()
 
 
-def cmd_enrich(args):
-    client = build_lastfm_client()
+def cmd_enrich(args, client):
     conn = get_connection()
     try:
         enrich_library_tracks(conn, client)
+    finally:
+        conn.close()
+
+
+def cmd_discover(args, client):
+    conn = get_connection()
+    try:
+        discover_candidates(conn, client)
+    finally:
+        conn.close()
+
+
+def cmd_sync_genres(args, client):
+    conn = get_connection()
+    try:
+        count = sync_genre_whitelist(conn, client)
+        print(f"Synced {count} MusicBrainz genres into the local whitelist.")
     finally:
         conn.close()
 
@@ -90,34 +110,53 @@ def main():
     parser = argparse.ArgumentParser(prog="wreckommend")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("ping", help="Check connectivity to the Navidrome server")
-    subparsers.add_parser("ingest", help="Ingest tracks from Navidrome")
-    subparsers.add_parser("enrich", help="Enrich library tracks with Last.fm tags")
+    ping_parser = subparsers.add_parser(
+        "ping", help="Check connectivity to the Navidrome server"
+    )
+    ping_parser.set_defaults(func=cmd_ping, client_builder=build_subsonic_client)
+
+    ingest_parser = subparsers.add_parser("ingest", help="Ingest tracks from Navidrome")
+    ingest_parser.set_defaults(func=cmd_ingest, client_builder=build_subsonic_client)
+
+    enrich_parser = subparsers.add_parser(
+        "enrich", help="Enrich library tracks with Last.fm tags"
+    )
+    enrich_parser.set_defaults(func=cmd_enrich, client_builder=build_lastfm_client)
+
+    discover_parser = subparsers.add_parser(
+        "discover",
+        help="Discover candidate tracks outside the library via Last.fm similar artists",
+    )
+    discover_parser.set_defaults(func=cmd_discover, client_builder=build_lastfm_client)
+
+    sync_genres_parser = subparsers.add_parser(
+        "sync-genres",
+        help="Refresh the local MusicBrainz genre whitelist used to clean tags",
+    )
+    sync_genres_parser.set_defaults(
+        func=cmd_sync_genres, client_builder=build_musicbrainz_client
+    )
 
     report_parser = subparsers.add_parser(
         "report-top-tags",
         help="Dump top library tags by frequency for stoplist/synonym curation",
     )
     report_parser.add_argument("--limit", type=int, default=200)
+    report_parser.set_defaults(func=cmd_report_top_tags, client_builder=None)
 
     nearest_parser = subparsers.add_parser(
         "nearest", help="Find nearest library tracks by tag vector for a given track"
     )
     nearest_parser.add_argument("query", help="Substring to match against track title")
     nearest_parser.add_argument("--top-n", type=int, default=10)
+    nearest_parser.set_defaults(func=cmd_nearest, client_builder=None)
 
     args = parser.parse_args()
 
-    if args.command == "ping":
-        cmd_ping(args)
-    elif args.command == "ingest":
-        cmd_ingest(args)
-    elif args.command == "enrich":
-        cmd_enrich(args)
-    elif args.command == "report-top-tags":
-        cmd_report_top_tags(args)
-    elif args.command == "nearest":
-        cmd_nearest(args)
+    if args.client_builder is None:
+        args.func(args)
+    else:
+        args.func(args, args.client_builder())
 
 
 if __name__ == "__main__":

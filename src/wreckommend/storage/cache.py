@@ -1,5 +1,10 @@
 import json
 from datetime import UTC, datetime
+from typing import Callable
+
+
+def params_key(*parts: str) -> str:
+    return "|".join(part.strip().lower() for part in parts)
 
 
 def get(conn, provider: str, endpoint: str, params_key: str) -> dict | None:
@@ -44,3 +49,18 @@ def put(
             fetched_at = excluded.fetched_at
     """
     conn.execute(sql, cache_dict)
+
+
+def get_or_fetch(
+    conn, provider: str, endpoint: str, params: tuple[str, ...], fetch: Callable[[], dict]
+) -> dict:
+    """Returns the cached response for params, or calls fetch(), caches, and returns it."""
+    key = params_key(*params)
+    cached = get(conn, provider, endpoint, key)
+    if cached is not None:
+        return cached
+
+    response = fetch()
+    with conn:
+        put(conn, provider, endpoint, key, response)
+    return response

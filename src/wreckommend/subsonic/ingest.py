@@ -225,8 +225,6 @@ def _link_track_artist(conn, track_id, artist, role):
 
 
 def insert_track_artists(conn, song):
-    # We first recognize all artists on a track as artists,
-    # then have another for-loop that specifically designates album artists for the track
     for artist in song.get("artists", []):
         _link_track_artist(conn, song["id"], artist, "artist")
 

@@ -1,33 +1,13 @@
-import time
-
-import requests
+from wreckommend.core.http_client import ApiClient
 
 
-class MusicBrainzClient:
-    _MIN_INTERVAL = 1.0
-
+class MusicBrainzClient(ApiClient):
     def __init__(self, url: str, contact_email: str):
-        self.url = url
-        self.session = requests.Session()
-        self.session.headers.update(
-            {"User-Agent": f"wreckommend/0.1 ({contact_email})"}
-        )
-        self._last_request_time = 0.0
-
-    def _throttle(self):
-        elapsed = time.monotonic() - self._last_request_time
-        if elapsed < self._MIN_INTERVAL:
-            time.sleep(self._MIN_INTERVAL - elapsed)
-        self._last_request_time = time.monotonic()
+        super().__init__(url, contact_email, min_interval=1.0)
 
     def _request(self, path: str, params: dict) -> dict:
-        self._throttle()
         request_params = params | {"fmt": "json"}
-        response = self.session.get(
-            f"{self.url}{path}", params=request_params, timeout=10
-        )
-        response.raise_for_status()
-        return response.json()
+        return self._get(f"{self.url}{path}", request_params)
 
     def search_artist(self, name: str) -> dict:
         return self._request("artist/", {"query": f'artist:"{name}"', "limit": 5})

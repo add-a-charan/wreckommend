@@ -78,8 +78,15 @@ CREATE TABLE IF NOT EXISTS track_artists (
     FOREIGN KEY (artist_id) REFERENCES artists(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS musicbrainz_genres (
-    name TEXT PRIMARY KEY
+CREATE TABLE IF NOT EXISTS candidate_tracks (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    artist_name TEXT NOT NULL,
+    artist_mbid TEXT,
+    track_mbid TEXT,
+    discovered_via TEXT,
+    source TEXT NOT NULL,
+    fetched_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS api_response_cache (

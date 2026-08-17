@@ -9,20 +9,14 @@ from wreckommend.storage import cache
 _MIN_MATCH_SCORE = 90
 
 
-def _params_key(*parts: str) -> str:
-    return "|".join(part.strip().lower() for part in parts)
-
-
 def search_artist(conn, client: MusicBrainzClient, name: str) -> dict:
-    params_key = _params_key(name)
-    cached = cache.get(conn, "musicbrainz", "artist.search", params_key)
-    if cached is not None:
-        return cached
-
-    response = client.search_artist(name)
-    with conn:
-        cache.put(conn, "musicbrainz", "artist.search", params_key, response)
-    return response
+    return cache.get_or_fetch(
+        conn,
+        "musicbrainz",
+        "artist.search",
+        (name,),
+        lambda: client.search_artist(name),
+    )
 
 
 def is_latin_script(text: str) -> bool:
@@ -50,7 +44,6 @@ def _pick_latin_alias(artist_json: dict) -> str | None:
 def resolve_latin_name(
     conn, client: MusicBrainzClient, artist_name: str
 ) -> tuple[str | None, str | None]:
-    """Best-effort (musicbrainz_id, latin_name) for artist_name, or (None, None)."""
     response = search_artist(conn, client, artist_name)
     results = response.get("artists") or []
     if not results:
@@ -94,7 +87,6 @@ def enrich_artist_latin_names(conn, client: MusicBrainzClient) -> None:
 
 
 def fetch_all_genres(client: MusicBrainzClient) -> list[str]:
-    """Full MusicBrainz controlled genre vocabulary (~2200 entries, paginated)."""
     names = []
     offset = 0
     while True:
@@ -108,12 +100,7 @@ def fetch_all_genres(client: MusicBrainzClient) -> list[str]:
 
 
 def sync_genre_whitelist(conn, client: MusicBrainzClient) -> int:
-    """Refreshes the local musicbrainz_genres table from the MB API. Returns count stored."""
     names = fetch_all_genres(client)
     with conn:
-        conn.execute("DELETE FROM musicbrainz_genres")
-        conn.executemany(
-            "INSERT INTO musicbrainz_genres (name) VALUES (?)",
-            [(name,) for name in names],
-        )
+        cache.put(conn, "musicbrainz", "genres", "all", {"genres": names})
     return len(names)

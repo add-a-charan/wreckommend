@@ -1,19 +1,18 @@
 import hashlib
 import secrets
 
-import requests
+from wreckommend.core.http_client import ApiClient
 
 
-class SubsonicClient:
+class SubsonicClient(ApiClient):
     def __init__(
         self, url: str, user: str, password: str, version: str, client_name: str
     ):
-        self.url = url
+        super().__init__(url)
         self.user = user
         self.password = password
         self.version = version
         self.client_name = client_name
-        self.session = requests.Session()
 
     def _auth_params(self) -> dict:
         salt = secrets.token_hex(16)
@@ -30,16 +29,11 @@ class SubsonicClient:
 
     def _request(self, method: str, params: dict | None = None) -> dict:
         request_params = (params or {}) | self._auth_params()
-        response = self.session.get(
-            f"{self.url}/rest/{method}.view", params=request_params, timeout=10
-        )
-        response.raise_for_status()
-        data = response.json()["subsonic-response"]
+        response = self._get(f"{self.url}/rest/{method}.view", request_params)
+        data = response["subsonic-response"]
         if data["status"] != "ok":
             error = data.get("error", {})
-            raise RuntimeError(
-                f"Subsonic error {error.get('code')}: {error.get('message')}"
-            )
+            self._raise_error("Subsonic", error.get("code"), error.get("message"))
         return data
 
     def ping(self) -> dict:
@@ -74,5 +68,5 @@ class SubsonicClient:
         params = {k: v for k, v in params.items() if v is not None}
         return self._request("getAlbumList2", params)
 
-    def get_album(self, id: str) -> dict:
-        return self._request("getAlbum", {"id": id})
+    def get_album(self, album_id: str) -> dict:
+        return self._request("getAlbum", {"id": album_id})
