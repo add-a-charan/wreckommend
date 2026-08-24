@@ -1,0 +1,313 @@
+
+
+#accounts-container {
+  width: 1fr;
+  height: 100%;
+
+  #accounts-list {
+    background: $background;
+    
+    &:focus {
+      background-tint: $background;
+    }
+
+    .account-container {
+      height: auto;
+      align-vertical: middle;
+      padding: 0 1 1 1;
+      border-top: tall $surface;
+      width: 1fr;
+      background: $background;
+      
+      .left-container {
+        height: auto;
+        # layout: horizontal;
+  
+        .name {
+          margin-right: 2;
+        }
+  
+        .description {
+          color: $primary-background-lighten-3;
+          
+        }
+        
+        .none {
+          display: none;
+        }
+      }
+      
+      &.selected {
+        border-left: outer $surface-lighten-2;
+        padding: 1 1 1 1;
+        border-top: none;
+        background: $surface;
+      }
+      
+      .balance {
+        dock: right;
+        color: $secondary;
+      }
+    }
+  }
+}
+
+#home-mode-container {
+  width: 30;
+  
+  #incomemode-container {
+    layout: horizontal;
+    width: 1fr;
+  }
+  #datemode-container {
+    width: 1fr;
+    height: 11;
+
+    .month-selector {
+      height: 2;
+      layout: horizontal;
+      align: center middle;
+
+      Button {
+        width: auto;
+      }
+      #prev-month {
+        dock: left;
+        color: $primary-background-lighten-3;
+      }
+      .current-filter-label {
+      }
+      #next-month {
+        dock: right;
+        color: $primary-background-lighten-3;
+      }
+    }
+    .calendar {
+      height: 6;
+      width: 20;
+      offset-x: 3;
+
+      .calendar-row {
+        height: 1;
+
+        Label {
+          width: 3;
+        }
+        .not_current_month {
+          color: $panel-lighten-1;
+        }
+      }
+
+      .calendar-dotw-row {
+        height: 1;
+
+        Label {
+          width: 3;
+          color: $primary-background-lighten-3;
+          text-style: italic;
+        }
+      }
+      
+      .target_month {
+        background: $accent 10%;
+      }
+
+      .target_week, .target {
+        background: $accent 20%;
+      }
+
+
+      .today {
+        color: $accent;
+        text-style: bold underline;
+      }
+      
+    }
+  }
+}
+
+.h {
+  #records-container {
+    height: 1fr;
+
+    #records-table {
+      height: 1fr;
+    }
+  }
+}
+
+#records-container {
+
+
+    .selectors {
+      height: auto;
+      
+      & > #display-selector {
+        layout: horizontal;
+        align: center middle;
+        height: auto;
+      }
+  
+      & > #filter-container {
+        height: 3;
+        layout: horizontal;
+        border-top: round $panel;
+        border-bottom: round $panel;
+  
+        & > Switch {
+          padding: 0;
+          border: none;
+          background: $primary;
+          
+        }
+  
+        & > Input {
+          width: 1fr;
+          margin-right: 1;
+          
+          &:focus {
+            background: $surface-lighten-1;
+            padding-left: 1;
+            padding-right: 1;
+            border-left: none;
+        
+          }
+        }
+      }
+    }
+  }
+
+  .h {
+    #insights-container {
+      height: 1fr;
+    }
+  }
+  
+  #insights-container {
+
+
+    .figures-container {
+      height: auto;
+      margin-bottom: 1;
+  
+      .container {
+        height: auto;
+  
+        .title {
+          color: $primary-background-lighten-3;
+        }
+  
+        .amount {
+          text-style: bold;
+        }
+      }
+      
+      .average {
+        Label {
+          text-align: right;
+          width: 1fr;
+        }
+      }
+    }
+  }
+  
+  #templates-container {
+    height: 5;
+  
+    .templates {
+      height: 3;
+  
+      .empty {
+        width: 1fr;
+        margin-top: 1;
+        color: $primary-background-lighten-3;
+        text-align: center;
+      }
+  
+      .template-item {
+        width: auto;
+        height: auto;
+        padding: 0 1;
+        layout: horizontal;
+        border: round $secondary;
+  
+        &:focus {
+          border: round $accent;
+        }
+  
+        .dot {
+          padding-right: 1;
+        }
+      }
+    }
+  }
+  
+  .bagel-container {
+    height: 15;
+    width: 30;
+    
+    #bagel {
+      color: $accent-lighten-3;
+    }
+  }
+  
+  #welcome-container {
+    border: round $accent-darken-3;
+    width: 100%;
+    height: 35;
+    layout: horizontal; 
+  
+    &:focus {
+      border: round $accent;
+    }
+  
+    
+    .text-container {
+      padding: 1 0;
+      width: 1fr;
+  
+      #welcome-text {
+        color: $accent;
+        text-style: bold;
+      }
+  
+      Markdown {
+        background: $background;
+        
+        &:focus {
+          background-tint: transparent;
+        }
+      }
+      
+      MarkdownViewer {
+        width: 1fr;
+        background: $background;
+      }
+  
+      MarkdownH1 {
+        color: $accent;
+        content-align: left middle;
+        margin: 0;
+      }
+  
+      MarkdownH2 {
+        color: $accent;
+        margin: 0 0 1 0;
+      }
+  
+      MarkdownHorizontalRule {
+        margin: 0;
+        border-top: heavy $primary-background-lighten-1;
+        border-bottom: none;
+      }
+  
+      MarkdownBullet {
+        color: $accent;
+      }
+  
+      MarkdownBlockQuote {
+        border-left: outer $accent;
+      }
+    }
+  
+  }

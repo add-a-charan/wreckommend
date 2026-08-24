@@ -64,6 +64,8 @@ class WreckommendApp(App):
         "./styles/home_modules.tcss",
         "./styles/discover.tcss",
         "./styles/discover_modules.tcss",
+        "./styles/albums.tcss",
+        "./styles/album_detail.tcss",
     ]
 
     BINDINGS = [

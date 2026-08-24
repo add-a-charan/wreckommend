@@ -6,19 +6,12 @@ from textual.containers import ScrollableContainer
 from textual.css.query import NoMatches
 from textual.widgets import Label, ListItem, ListView, ProgressBar, Static
 
-from wreckommend.audio.player import Player
+from wreckommend.audio.playback import STATUS_ICONS, PlaybackMixin
 from wreckommend.clients import build_deezer_client, build_lastfm_client
 from wreckommend.deezer.preview import download_preview, fetch_preview
 from wreckommend.lastfm.candidates import discover_candidates
 from wreckommend.scoring import score_candidates, top_candidates
 from wreckommend.storage.db import get_connection
-
-_STATUS_ICONS = {
-    "loading": "⏳",
-    "downloading": "⬇",
-    "playing": "▶",
-    "paused": "⏸",
-}
 
 
 class RecommendationItem(ListItem):
@@ -44,7 +37,7 @@ class RecommendationItem(ListItem):
 
     def _name_text(self) -> str:
         _id, title, artist_name, *_ = self.candidate
-        icon = _STATUS_ICONS.get(self.status)
+        icon = STATUS_ICONS.get(self.status)
         prefix = f"{icon} " if icon else ""
         return f"{prefix}{title} — {artist_name}"
 
@@ -81,7 +74,7 @@ class RecommendationsList(ListView):
         )
 
 
-class Recommendations(ScrollableContainer):
+class Recommendations(ScrollableContainer, PlaybackMixin):
     _pipeline_has_run = False
     PAGE_SIZE = 25
 
@@ -96,8 +89,7 @@ class Recommendations(ScrollableContainer):
         self._offset = 0
         self._loading_more = False
         self._exhausted = False
-        self._player = Player()
-        self._now_playing_item: RecommendationItem | None = None
+        self.init_playback()
 
     async def on_mount(self) -> None:
         if Recommendations._pipeline_has_run:
@@ -107,7 +99,7 @@ class Recommendations(ScrollableContainer):
             self.run_pipeline()
 
     def on_unmount(self) -> None:
-        self._player.stop()
+        self.stop_playback()
 
     async def _load_from_db(self) -> None:
         conn = get_connection()
@@ -216,103 +208,45 @@ class Recommendations(ScrollableContainer):
             return
         item = event.item
         if isinstance(item, RecommendationItem):
-            self._toggle_playback(item)
-
-    def _toggle_playback(self, item: RecommendationItem) -> None:
-        if self._now_playing_item is item:
-            if self._player.is_paused:
-                self._player.resume()
-                item.set_status("playing")
-            else:
-                self._player.pause()
-                item.set_status("paused")
-            return
-
-        if self._now_playing_item is not None:
-            self._player.stop()
-            self._now_playing_item.set_status("idle")
-
-        self._now_playing_item = item
-        item.set_status("loading")
-        self._play_candidate(item)
-
-    @work(thread=True, exclusive=True, group="playback")
-    def _play_candidate(self, item: RecommendationItem) -> None:
-        candidate_id, title, artist_name, tag_score, discovered_via, source, _ = (
-            item.candidate
-        )
-        conn = get_connection()
-        error = None
-        try:
-            path = self._resolve_preview_path(conn, item, candidate_id, artist_name, title)
-        except Exception as exc:
-            path = None
-            error = str(exc) or exc.__class__.__name__
-        finally:
-            conn.close()
-
-        if path is None:
-            self.app.call_from_thread(
-                self._playback_failed, item, error or "No preview available"
+            self.toggle_playback(
+                item,
+                lambda report_status, report_progress: self._resolve_preview_path(
+                    item, report_status, report_progress
+                ),
             )
-            return
-
-        self._player.play(path)
-        self.app.call_from_thread(self._playback_started, item)
 
     def _resolve_preview_path(
-        self, conn, item: RecommendationItem, candidate_id: str, artist_name: str, title: str
-    ) -> Path | None:
-        row = conn.execute(
-            "SELECT preview_path FROM candidate_tracks WHERE id = ?",
-            (candidate_id,),
-        ).fetchone()
-        preview_path = row[0] if row else None
+        self, item: RecommendationItem, report_status, report_progress
+    ) -> Path:
+        candidate_id, title, artist_name, *_ = item.candidate
+        conn = get_connection()
+        try:
+            row = conn.execute(
+                "SELECT preview_path FROM candidate_tracks WHERE id = ?",
+                (candidate_id,),
+            ).fetchone()
+            preview_path = row[0] if row else None
 
-        if preview_path and Path(preview_path).exists():
-            return Path(preview_path)
+            if preview_path and Path(preview_path).exists():
+                return Path(preview_path)
 
-        # Deezer preview URLs are signed and expire ~15 minutes after being
-        # issued, so any cached preview_url may be stale by the time the user
-        # clicks play. Always fetch a live one right before downloading.
-        client = build_deezer_client()
-        preview_url = fetch_preview(
-            conn, client, candidate_id, artist_name, title, force=True
-        )
-        if not preview_url:
-            return None
-
-        self.app.call_from_thread(self._set_item_status_if_current, item, "downloading")
-
-        def on_progress(downloaded: int, total: int) -> None:
-            self.app.call_from_thread(
-                self._update_item_progress_if_current, item, downloaded, total
+            # Deezer preview URLs are signed and expire ~15 minutes after
+            # being issued, so any cached preview_url may be stale by the
+            # time the user clicks play. Always fetch a live one right
+            # before downloading.
+            client = build_deezer_client()
+            preview_url = fetch_preview(
+                conn, client, candidate_id, artist_name, title, force=True
             )
+            if not preview_url:
+                raise RuntimeError("No preview available")
 
-        return download_preview(
-            conn, client, candidate_id, preview_url, on_progress=on_progress
-        )
-
-    def _set_item_status_if_current(self, item: RecommendationItem, status: str) -> None:
-        if self._now_playing_item is item:
-            item.set_status(status)
-
-    def _update_item_progress_if_current(
-        self, item: RecommendationItem, downloaded: int, total: int
-    ) -> None:
-        if self._now_playing_item is item:
-            item.update_progress(downloaded, total)
-
-    def _playback_started(self, item: RecommendationItem) -> None:
-        if self._now_playing_item is item:
-            item.set_status("playing")
-
-    def _playback_failed(self, item: RecommendationItem, error: str | None = None) -> None:
-        if self._now_playing_item is item:
-            self._now_playing_item = None
-        item.set_status("idle")
-        if error:
-            self.app.notify(error, title="Playback failed", severity="error")
+            report_status("downloading")
+            return download_preview(
+                conn, client, candidate_id, preview_url, on_progress=report_progress
+            )
+        finally:
+            conn.close()
 
     def compose(self) -> ComposeResult:
         yield RecommendationsList(self.candidates)

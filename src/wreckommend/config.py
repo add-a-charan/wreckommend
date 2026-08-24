@@ -17,6 +17,9 @@ APP_DB_PATH = os.getenv("DB_PATH", str(PROJECT_ROOT / "data" / "wreckommend.db")
 APP_PREVIEW_DIR = Path(
     os.getenv("PREVIEW_DIR", str(PROJECT_ROOT / "data" / "previews"))
 )
+APP_STREAM_CACHE_DIR = Path(
+    os.getenv("STREAM_CACHE_DIR", str(PROJECT_ROOT / "data" / "stream_cache"))
+)
 APP_CONTACT_EMAIL = os.environ["CONTACT_EMAIL"]
 
 LASTFM_API_KEY = os.environ["LASTFM_API_KEY"]

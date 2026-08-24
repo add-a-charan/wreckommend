@@ -1,0 +1,150 @@
+
+
+/* ---------------------------------- */
+/*             Input modal            */
+/* ---------------------------------- */
+
+.modal-screen {
+    align: center top;
+    background: $background 60%;
+  
+    .base-modal {
+      max-width: 80;
+    }
+  
+    .max-width-80 {
+      max-width: 80;
+    }
+  
+    .wrapper {
+      margin: 2;
+      width: 1fr;
+      height: auto;
+      max-height: 1fr;
+  
+      Header {
+        background: $surface-lighten-2;
+      }
+  
+      Footer {
+        width: 1fr;
+        height: 1;
+        background: $surface-lighten-2;
+  
+        FooterKey {
+          background: $surface-lighten-2;
+          .footer-key--key {
+            background: $surface-lighten-2;
+          }
+        }
+      }
+  
+      .container {
+        padding: 1 2;
+        height: auto;
+        border-left: outer $surface-lighten-2;
+        border-right: outer $surface-lighten-2;
+  
+        #split-total {
+          border-top: double $primary-background;
+          width: 1fr;
+          margin-top: 1;
+        }
+  
+        #splits-container {
+          height: auto;
+  
+          .split {
+            border-top: round $surface-lighten-3;
+            height: auto;
+            padding-top: 1;
+  
+          }
+        }
+      }
+    }
+  }
+  
+  /* ---------------------------------- */
+  /*           Transfer Modal           */
+  /* ---------------------------------- */
+  
+  #transfer-modal {
+    align-horizontal: center;
+    height: auto;
+  
+    .active { # transfer-error
+      color: $error;
+      background: $error 20%;
+      border-left: outer $error;
+      border-right: outer $error;
+      width: 1fr;
+      text-align: center;
+      margin-top: 1;
+    }
+  
+    .transfer-accounts-container {
+      height: 10;
+      margin-top: 1;
+      layout: horizontal;
+      align: center middle;
+  
+      .arrow {
+        padding: 4 2;
+      }
+  
+      .accounts {
+        height: 1fr;
+        background: $surface 40%;
+  
+        &:focus {
+          border-bottom: hkey $accent;
+          # box-sizing: content-box;
+        }
+  
+          &:focus > ListItem.-highlight > Widget {
+            width: auto;
+            color: $accent;
+            background: $surface-lighten-2;
+            text-style: initial;            
+        }
+        
+        .item {
+          height: 3;
+          layout: horizontal;
+          padding: 0 1 1 1;
+          border-top: tall $surface-lighten-2;
+          background: $surface;
+  
+          &.-highlight {
+            border-left: outer $accent;
+            padding: 1 1 1 1;
+            border-top: none;
+            background: $surface-lighten-2;
+          }
+          
+          & > .selected {
+            background: $surface;
+          }
+  
+          .name {
+            dock: left;
+  
+            &.hidden-name {
+              text-style: italic;
+              color: $text-muted;
+            }
+          }
+          .balance {
+            dock: right;
+            color: $secondary;
+  
+            &.hidden-balance {
+              display: none;
+            }
+          }
+        }
+      }
+    }
+  }
+  

@@ -1,0 +1,32 @@
+
+#home-top-container {
+  layout: horizontal;
+  width: 1fr;
+  height: auto;
+}
+
+.home-modules-container {
+  height: auto;
+  width: 1fr;
+  padding: 0 2 1 2;
+}
+
+.h {
+  .home-modules-container {
+    layout: horizontal;
+    width: 1fr;
+    
+    .left {
+      width: 40%;
+    }
+    .right {
+      width: 60%
+    }
+  }
+}
+
+.v {
+  .home-modules-container {
+    layout: vertical;
+  }
+}

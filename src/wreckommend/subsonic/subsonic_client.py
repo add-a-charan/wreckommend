@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+from collections.abc import Callable
 
 from wreckommend.core.http_client import ApiClient
 
@@ -83,3 +84,13 @@ class SubsonicClient(ApiClient):
         if size is not None:
             params["size"] = size
         return self._download(f"{self.url}/rest/getCoverArt.view", params)
+
+    def stream(
+        self,
+        track_id: str,
+        on_progress: Callable[[int, int], None] | None = None,
+    ) -> bytes:
+        params = {"id": track_id} | self._auth_params()
+        return self._download(
+            f"{self.url}/rest/stream.view", params, on_progress=on_progress
+        )

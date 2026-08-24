@@ -1,0 +1,320 @@
+/* ---------------------------------- */
+/*                Base                */
+/* ---------------------------------- */
+
+* {
+  scrollbar-color: $accent 30%;
+  scrollbar-color-hover: $accent 80%;
+  scrollbar-color-active: $accent;
+  scrollbar-background: $surface-darken-1;
+  scrollbar-background-hover: $surface-darken-1;
+  scrollbar-background-active: $surface-darken-1;
+  scrollbar-size-vertical: 1;
+
+  &:focus {
+    scrollbar-color: $accent 55%;
+  }
+}
+
+Screen {
+  background: $background;
+}
+
+/* Textual's ListView ships with `background: $surface` baked into its
+   DEFAULT_CSS, which reads as a mismatched lighter panel against the rest
+   of the page ($background). Every list in the app (albums, tracks,
+   recommendations, playlists) should blend into whatever it's on instead. */
+ListView {
+  background: transparent;
+}
+
+Rule {
+  margin: 0;
+  color: $primary-background;
+}
+
+Button {
+  width: auto;
+  height: auto;
+  background: transparent;
+  color: $text;
+  min-width: 0;
+  border: none;
+  text-style: none;
+
+  &:focus {
+      text-style: bold reverse;
+  }
+
+  &:hover {
+      background: $panel-darken-2;
+      color: $text;
+  }
+
+  &.-active {
+      background: $panel;
+      tint: $background 30%;
+  }
+}
+
+Center {
+  align: center middle;
+  height: 1fr;
+}
+
+Input {
+  padding: 0 1;
+  height: 1;
+  background: $surface;
+  border: none;
+  &.-invalid {
+    padding-left: 0;
+    border-left: outer $error;
+  }
+
+  &:focus {
+    background: $surface-lighten-1;
+    padding-left: 0;
+    border-left: outer $surface-lighten-2;
+    &.-invalid {
+      border-left: outer $error;
+    }
+
+    & .input--cursor {
+      color: $text;
+      background: $accent;
+      text-style: not reverse;
+    }
+
+  }
+}
+
+Button {
+  width: 50%;
+  text-align: center;
+  color: $accent 50%;
+  
+  &.selected {
+    color: $accent;
+    text-style: bold;
+    background: $surface;
+  }
+  &:focus {
+    background: $accent 10%;
+  }
+}
+
+Tabs {
+  & .-active {
+      text-style: $block-cursor-text-style;
+      color: $block-cursor-foreground;
+      background: $block-cursor-background;
+  }
+}
+
+/* ---------------------------------- */
+/*                Utils               */
+/* ---------------------------------- */
+
+.empty-indicator {
+  width: 1fr;
+  hatch: right $primary-background;
+  content-align: center middle;
+  height: 1fr;
+  max-height: 1fr;
+  color: $primary-background-lighten-1;
+}
+
+.module-container {
+  width: 1fr;
+  border: round $panel-lighten-2;
+  padding-left: 1;  
+  padding-right: 1;
+
+  &:focus {
+    border: round $accent;
+  }
+  
+  &:focus-within {
+    border: round $accent;
+  }
+}
+
+.hidden {
+  visibility: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---------------------------------- */
+/*                 App                */
+/* ---------------------------------- */
+
+.header {
+  layout: horizontal;
+  height: auto;
+  padding: 1 2;
+
+  .title {
+    color: $accent-lighten-1;
+  }
+
+  .version {
+    color: $accent-lighten-1 60%;
+    margin-left: 1;
+  }
+
+  .root-tabs {
+    width: 1fr;
+    margin-left: 2;
+  }
+  
+  .path {
+    color: $primary-background-lighten-3;
+    dock: right;
+  }
+
+}
+
+.content {
+  width: 1fr;
+  height: 1fr;
+  overflow-y: scroll;
+}
+
+/* ---------------------------------- */
+/*             Input field            */
+/* ---------------------------------- */
+
+.hidden-field {
+  display: none;
+}
+
+.field-row {
+  height: 3;
+
+  .label {
+    color: $accent;
+  }
+
+  Input {
+  }
+
+  Label.error {
+    color: $error;
+    dock: right;
+    layer: error;
+    border-right: outer $error;
+    background: $error 20%;
+    padding-left: 1;
+  }
+
+  .autocomplete-container {
+    position: relative;
+    .autocomplete-postfix-display-label {
+      position: absolute;
+      dock: right;
+    }
+  }
+
+  .switch-group {
+    layout: horizontal;
+
+    .left {
+      dock: left;
+    }
+
+    .right {
+      dock: right;
+    }
+
+    Switch {
+      width: 1fr;
+      margin: 0 2;
+      padding: 0;
+      border: none;
+  
+      .switch--slider {
+        color: $accent;
+        background: $surface;
+      }
+  
+      &:focus > .switch--slider {
+        color: $accent-lighten-1;
+        background: $surface-lighten-2;
+      }
+  
+      .-on > .switch--slider {
+        color: $accent;
+      }
+  }
+  }
+
+  .field-autocomplete {
+    margin-left: 0;
+  }
+}
+
+/* ---------------------------------- */
+/*         Confirmation Modal         */
+/* ---------------------------------- */
+
+#confirmation-modal-screen {
+  align: center bottom;
+  background: $background 60%;
+
+  .dialog {
+    padding: 0 1;
+    margin: 2;
+    width: 100%;
+    height: 5;
+    border: wide $accent;
+    align-vertical: middle;
+  
+    Label {
+      color: white;
+      width: 1fr;
+      text-align: center;
+    }
+  }
+}
+
+/* ---------------------------------- */
+/*               Jumper               */
+/* ---------------------------------- */
+
+.textual-jump-label {
+  layer: textual-jump;
+  dock: top;
+  # background: $accent-lighten-2;
+  text-style: bold;
+  color: $text;
+  border: round $accent;
+  padding: 0 1;
+}
+
+#textual-jump-info {
+  margin-bottom: 1;
+  dock: bottom;
+  height: 1;
+  width: 1fr;
+  background: $accent;
+  color: $text;
+  hatch: right $accent-darken-2;
+  
+  & Label {
+    width: auto;
+    padding: 0 1;
+  }
+}
+
+#textual-jump-dismiss {
+  dock: bottom;
+  height: 1;
+  background: transparent;
+  color: $text-muted 42%;
+}
+
+JumpOverlay {
+  background: $background 50%;
+}

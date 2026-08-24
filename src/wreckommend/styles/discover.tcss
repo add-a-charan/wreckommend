@@ -1,0 +1,38 @@
+.h {
+  .discover-modules-container {
+    layout: horizontal;
+
+    & > Container {
+      height: 1fr;
+    }
+
+    .left {
+      width: 1fr;
+    }
+
+    .right {
+      width: 3fr;
+    }
+  }
+}
+
+.v {
+  .discover-modules-container {
+    layout: vertical;
+
+    .left {
+      height: 65%;
+    }
+
+    .right {
+      height: 1fr;
+      layout: horizontal;
+    }
+  }
+}
+
+.discover-modules-container {
+  height: 1fr;
+  width: 1fr;
+  padding: 0 2 1 2;
+}

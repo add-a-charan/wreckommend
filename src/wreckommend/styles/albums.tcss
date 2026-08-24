@@ -1,0 +1,55 @@
+#albums {
+  height: 1fr;
+  width: 1fr;
+  padding: 0 2 1 2;
+
+  #albums-list {
+    ListItem {
+      height: 6;
+    }
+
+    .album-row {
+      height: 6;
+      layout: horizontal;
+      align-vertical: middle;
+
+      .cover-art {
+        width: 12;
+        height: 6;
+        margin-right: 1;
+      }
+
+      .album-info {
+        width: 1fr;
+        height: auto;
+
+        .name {
+          text-style: bold;
+        }
+
+        .meta {
+          color: $text-muted;
+        }
+
+        .album-badges {
+          height: 1;
+          layout: horizontal;
+          margin-top: 1;
+
+          .rating {
+            color: $warning;
+            margin-right: 2;
+          }
+
+          .heart {
+            color: $text-muted;
+
+            &.favorited {
+              color: $error;
+            }
+          }
+        }
+      }
+    }
+  }
+}

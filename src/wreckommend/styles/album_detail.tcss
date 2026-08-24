@@ -1,0 +1,82 @@
+#album-detail-body {
+  height: 1fr;
+  width: 1fr;
+  padding: 1 2;
+
+  .album-header {
+    height: auto;
+    margin-bottom: 1;
+
+    .hero-cover-art {
+      width: 24;
+      height: 12;
+      margin-right: 2;
+    }
+
+    .album-meta {
+      width: 1fr;
+      height: auto;
+
+      .album-title {
+        text-style: bold;
+        color: $accent-lighten-1;
+      }
+
+      .album-artist {
+        color: $text-muted;
+      }
+
+      .album-info {
+        margin-top: 1;
+        color: $text-muted;
+      }
+    }
+  }
+
+  #album-tracks-list {
+    height: auto;
+
+    ListItem {
+      height: 1;
+    }
+
+    .track-row {
+      height: 1;
+      layout: horizontal;
+      align-vertical: middle;
+
+      .track-number {
+        width: 4;
+        color: $text-muted;
+        text-align: right;
+        margin-right: 1;
+      }
+
+      .track-title {
+        width: 1fr;
+      }
+
+      .rating {
+        width: auto;
+        color: $warning;
+        margin-right: 2;
+      }
+
+      .heart {
+        width: auto;
+        color: $text-muted;
+        margin-right: 2;
+
+        &.favorited {
+          color: $error;
+        }
+      }
+
+      .track-duration {
+        width: 6;
+        text-align: right;
+        color: $text-muted;
+      }
+    }
+  }
+}
