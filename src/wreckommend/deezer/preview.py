@@ -1,12 +1,23 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from collections.abc import Callable
 
 from wreckommend import config
 from wreckommend.deezer.deezer_client import DeezerClient
 from wreckommend.storage import cache
 
 
-def search_track(conn, client: DeezerClient, artist: str, title: str) -> dict:
+def search_track(
+    conn, client: DeezerClient, artist: str, title: str, force: bool = False
+) -> dict:
+    if force:
+        response = client.search_track(artist, title)
+        with conn:
+            cache.put(
+                conn, "deezer", "search", cache.params_key(artist, title), response
+            )
+        return response
+
     return cache.get_or_fetch(
         conn,
         "deezer",
@@ -33,9 +44,14 @@ def _persist_preview(conn, candidate_id: str, preview_url: str | None) -> None:
 
 
 def fetch_preview(
-    conn, client: DeezerClient, candidate_id: str, artist_name: str, title: str
+    conn,
+    client: DeezerClient,
+    candidate_id: str,
+    artist_name: str,
+    title: str,
+    force: bool = False,
 ) -> str | None:
-    response = search_track(conn, client, artist_name, title)
+    response = search_track(conn, client, artist_name, title, force=force)
     match = _best_match(response)
     preview_url = (match or {}).get("preview") or None
     with conn:
@@ -55,11 +71,15 @@ def _persist_download(conn, candidate_id: str, path: Path) -> None:
 
 
 def download_preview(
-    conn, client: DeezerClient, candidate_id: str, preview_url: str
+    conn,
+    client: DeezerClient,
+    candidate_id: str,
+    preview_url: str,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> Path:
     """Download 30s MP3 preview for candidate with existing
     preview_url. Saved at config.APP_PREVIEW_DIR."""
-    audio = client.download_preview(preview_url)
+    audio = client.download_preview(preview_url, on_progress=on_progress)
 
     config.APP_PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
     path = config.APP_PREVIEW_DIR / f"{candidate_id}.mp3"

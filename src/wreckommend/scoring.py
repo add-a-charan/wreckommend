@@ -40,9 +40,9 @@ def score_candidates(conn) -> None:
         print("No liked library tracks with usable tags; nothing to score against.")
         return
 
-    total_candidates = conn.execute(
-        "SELECT COUNT(*) FROM candidate_tracks"
-    ).fetchone()[0]
+    total_candidates = conn.execute("SELECT COUNT(*) FROM candidate_tracks").fetchone()[
+        0
+    ]
 
     index = {entity_id: i for i, entity_id in enumerate(entity_ids)}
     liked_matrix = matrix[[index[tid] for tid in liked_ids]]
@@ -66,14 +66,14 @@ def score_candidates(conn) -> None:
     )
 
 
-def top_candidates(conn, limit: int = 25) -> list[tuple]:
+def top_candidates(conn, limit: int = 25, offset: int = 0) -> list[tuple]:
     return conn.execute(
         """
-        SELECT title, artist_name, tag_score, discovered_via, source, preview_url
+        SELECT id, title, artist_name, tag_score, discovered_via, source, preview_url
         FROM candidate_tracks
         WHERE tag_score IS NOT NULL
         ORDER BY tag_score DESC
-        LIMIT ?
+        LIMIT ? OFFSET ?
         """,
-        (limit,),
+        (limit, offset),
     ).fetchall()

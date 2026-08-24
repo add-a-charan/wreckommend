@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from wreckommend.core.http_client import ApiClient
 
 
@@ -15,5 +17,7 @@ class DeezerClient(ApiClient):
             )
         return data
 
-    def download_preview(self, url: str) -> bytes:
-        return self._download(url)
+    def download_preview(
+        self, url: str, on_progress: Callable[[int, int], None] | None = None
+    ) -> bytes:
+        return self._download(url, on_progress=on_progress)

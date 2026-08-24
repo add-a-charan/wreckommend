@@ -82,7 +82,15 @@ def cmd_top_candidates(args):
         if not rows:
             print("No scored candidates yet. Run `score` first.")
             return
-        for title, artist_name, tag_score, discovered_via, source, preview_url in rows:
+        for (
+            _id,
+            title,
+            artist_name,
+            tag_score,
+            discovered_via,
+            source,
+            preview_url,
+        ) in rows:
             line = f"{tag_score:.3f}  {artist_name} - {title}  (via {discovered_via}, {source})"
             if preview_url:
                 line += f"\n           {preview_url}"

@@ -70,3 +70,16 @@ class SubsonicClient(ApiClient):
 
     def get_album(self, album_id: str) -> dict:
         return self._request("getAlbum", {"id": album_id})
+
+    def get_playlists(self, username: str | None = None) -> dict:
+        params = {"username": username} if username else None
+        return self._request("getPlaylists", params)
+
+    def get_playlist(self, playlist_id: str) -> dict:
+        return self._request("getPlaylist", {"id": playlist_id})
+
+    def get_cover_art(self, cover_art_id: str, size: int | None = None) -> bytes:
+        params = {"id": cover_art_id} | self._auth_params()
+        if size is not None:
+            params["size"] = size
+        return self._download(f"{self.url}/rest/getCoverArt.view", params)
